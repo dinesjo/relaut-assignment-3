@@ -4,31 +4,35 @@ Finds the shortest path from start to goal avoiding obstacles.
 """
 
 import heapq
-from typing import List, Optional
+from typing import List, Optional, Dict, Union
 from robot import Robot
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def find_path(robot: Robot, goal: int) -> Optional[List[int]]:
+def find_path(robot: Robot, goal: Optional[int] = None) -> Union[Optional[List[int]], Dict[int, List[int]]]:
     """
-    Find shortest path from robot's current position to goal using Dijkstra's algorithm
+    Find shortest path from robot's current position using Dijkstra's algorithm
 
     Args:
         robot: Robot instance with current position
-        goal: Target position to reach
+        goal: Target position to reach. If None, returns paths to all reachable positions.
 
     Returns:
-        List of positions from start to goal, or None if no path exists
+        If goal is specified: List of positions from start to goal, or None if no path exists
+        If goal is None: Dictionary mapping each reachable position to its path from start
     """
-    assert robot.grid.is_valid_position(goal), f"Goal {goal} is out of bounds"
+    if goal is not None:
+        assert robot.grid.is_valid_position(goal), f"Goal {goal} is out of bounds"
 
-    if not robot.grid.is_walkable(goal):
-        logger.error(f"Goal position {goal} is blocked by a shelf")
-        return None
+        if not robot.grid.is_walkable(goal):
+            logger.error(f"Goal position {goal} is blocked by a shelf")
+            return None
 
-    logger.info(f"Running Dijkstra from {robot.position} to {goal}")
+        logger.info(f"Running Dijkstra from {robot.position} to {goal}")
+    else:
+        logger.info(f"Running Dijkstra from {robot.position} to find all reachable positions")
 
     start = robot.position
 
@@ -46,7 +50,7 @@ def find_path(robot: Robot, goal: int) -> Optional[List[int]]:
 
         visited.add(current)
 
-        if current == goal:
+        if goal is not None and current == goal:
             # Reconstruct path
             path = []
             pos: Optional[int] = goal
@@ -69,8 +73,23 @@ def find_path(robot: Robot, goal: int) -> Optional[List[int]]:
                 previous[neighbor] = current
                 heapq.heappush(pq, (new_dist, neighbor))
 
-    logger.warning(f"No path found from {robot.position} to {goal}")
-    return None
+    if goal is not None:
+        logger.warning(f"No path found from {robot.position} to {goal}")
+        return None
+    else:
+        # Reconstruct paths to all reachable positions
+        all_paths: Dict[int, List[int]] = {}
+        for destination in visited:
+            path = []
+            pos: Optional[int] = destination
+            while pos is not None:
+                path.append(pos)
+                pos = previous[pos]
+            path.reverse()
+            all_paths[destination] = path
+
+        logger.info(f"Dijkstra found paths to {len(all_paths)} reachable positions")
+        return all_paths
 
 
 def navigate(robot: Robot, goal: int) -> bool:
@@ -84,11 +103,14 @@ def navigate(robot: Robot, goal: int) -> bool:
     Returns:
         True if goal reached, False otherwise
     """
-    path = find_path(robot, goal)
+    result = find_path(robot, goal)
 
-    if not path:
+    # Since we passed a goal, result should be Optional[List[int]]
+    if not result or not isinstance(result, list):
         logger.error("Cannot navigate: no path found")
         return False
+
+    path: List[int] = result
 
     # Execute the path
     for i in range(1, len(path)):

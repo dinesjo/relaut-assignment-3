@@ -29,15 +29,46 @@ def demonstrate_dijkstra(grid: Grid, start: int, goal: int):
     logger.info("Initial grid:")
     print(grid.visualize(robot_pos=robot.position))
 
-    path = dijkstra.find_path(robot, goal)
+    result = dijkstra.find_path(robot, goal)
 
-    if path:
+    if result and isinstance(result, list):
+        path = result
         logger.info(f"Path found: {path}")
         logger.info(f"Path length: {len(path)} steps")
         logger.info("Grid with path:")
         print(grid.visualize(path=path, robot_pos=robot.position))
     else:
         logger.error("No path found!")
+
+
+def demonstrate_dijkstra_all(grid: Grid, start: int):
+    """Demonstrate Dijkstra's algorithm finding all reachable positions"""
+    logger.info("=" * 60)
+    logger.info("DEMONSTRATING DIJKSTRA'S ALGORITHM - ALL REACHABLE POSITIONS")
+    logger.info("=" * 60)
+
+    robot = Robot(grid, start)
+
+    logger.info("Initial grid:")
+    print(grid.visualize(robot_pos=robot.position))
+
+    result = dijkstra.find_path(robot, goal=None)
+
+    if not result or not isinstance(result, dict):
+        logger.error("No reachable positions found!")
+        return
+
+    all_paths = result
+    logger.info(f"Number of reachable positions: {len(all_paths)}")
+    for destination, path in all_paths.items():
+        logger.info(f"Path to {destination}: {path} (length: {len(path)} steps)")
+    
+    for destination, path in all_paths.items():
+        assert path[0] == start, f"Path to {destination} does not start at {start}"
+        assert path[-1] == destination, f"Path to {destination} does not end at {destination}"
+        assert all(
+            robot.grid.is_walkable(pos) for pos in path
+        ), f"Path to {destination} contains non-walkable positions"
 
 
 def demonstrate_bug2_success(grid: Grid, start: int, goal: int, obstacle_pos: int):
@@ -50,12 +81,13 @@ def demonstrate_bug2_success(grid: Grid, start: int, goal: int, obstacle_pos: in
 
     # First, compute path with Dijkstra (before dynamic obstacle)
     logger.info(f"Computing initial path from {start} to {goal}")
-    path = dijkstra.find_path(robot, goal)
+    result = dijkstra.find_path(robot, goal)
 
-    if not path:
+    if not result or not isinstance(result, list):
         logger.error("No initial path found!")
         return
 
+    path = result
     logger.info(f"Initial path: {path}")
     logger.info("Grid with planned path:")
     print(grid.visualize(path=path, robot_pos=robot.position))
@@ -155,11 +187,14 @@ def main():
     # Demonstration 1: Dijkstra's algorithm
     demonstrate_dijkstra(grid, start=1, goal=42)
 
-    # Demonstration 2: Bug2 successful circumnavigation
+    # Demonstration 2: Dijkstra's algorithm - all reachable positions
+    demonstrate_dijkstra_all(grid, start=1)
+
+    # Demonstration 3: Bug2 successful circumnavigation
     # Path from 1 to 12, with dynamic obstacle at position 6
     demonstrate_bug2_success(grid, start=1, goal=12, obstacle_pos=6)
 
-    # Demonstration 3: Bug2 with blocked path
+    # Demonstration 4: Bug2 with blocked path
     demonstrate_bug2_blocked(grid, start=1, goal=42)
 
     logger.info("=" * 60)
