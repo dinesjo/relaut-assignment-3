@@ -62,10 +62,12 @@ def demonstrate_dijkstra_all(grid: Grid, start: int):
     logger.info(f"Number of reachable positions: {len(all_paths)}")
     for destination, path in all_paths.items():
         logger.info(f"Path to {destination}: {path} (length: {len(path)} steps)")
-    
+
     for destination, path in all_paths.items():
         assert path[0] == start, f"Path to {destination} does not start at {start}"
-        assert path[-1] == destination, f"Path to {destination} does not end at {destination}"
+        assert (
+            path[-1] == destination
+        ), f"Path to {destination} does not end at {destination}"
         assert all(
             robot.grid.is_walkable(pos) for pos in path
         ), f"Path to {destination} contains non-walkable positions"
@@ -79,30 +81,16 @@ def demonstrate_bug2_success(grid: Grid, start: int, goal: int, obstacle_pos: in
 
     robot = Robot(grid, start)
 
-    # First, compute path with Dijkstra (before dynamic obstacle)
-    logger.info(f"Computing initial path from {start} to {goal}")
-    result = dijkstra.find_path(robot, goal)
-
-    if not result or not isinstance(result, list):
-        logger.error("No initial path found!")
-        return
-
-    path = result
-    logger.info(f"Initial path: {path}")
-    logger.info("Grid with planned path:")
-    print(grid.visualize(path=path, robot_pos=robot.position))
+    logger.info("Initial grid:")
+    print(grid.visualize(robot_pos=robot.position))
 
     # Now place a dynamic obstacle on the path
     logger.info(f"Placing dynamic obstacle at position {obstacle_pos}")
     dynamic_obstacles = {obstacle_pos}
 
-    logger.info("Grid with obstacle:")
-    print(grid.visualize(path=path, robot_pos=robot.position))
-    print(f"Dynamic obstacle at: {obstacle_pos}")
-
     # Execute path with obstacle detection
     logger.info("Robot starts executing path...")
-    success = bug2.execute_path(robot, path, dynamic_obstacles)
+    success = bug2.bug2_navigate(robot, goal, dynamic_obstacles)
 
     if success:
         logger.info(f"SUCCESS: Robot reached goal at position {goal}")
@@ -113,41 +101,27 @@ def demonstrate_bug2_success(grid: Grid, start: int, goal: int, obstacle_pos: in
 
 
 def demonstrate_bug2_blocked(grid: Grid, start: int, goal: int):
-    """Demonstrate Bug2 algorithm when path is completely blocked"""
+    """Demonstrate Bug2 algorithm failing due to blocked path"""
     logger.info("=" * 60)
     logger.info("DEMONSTRATING BUG2 - BLOCKED PATH")
     logger.info("=" * 60)
 
-    # Create a wall of obstacles blocking the path
-    logger.info("Creating wall of obstacles to block path")
-
-    # Add obstacles to create a complete wall (entire row 3, positions 13-18)
-    wall_obstacles = set()
-    for col in range(GRID_WIDTH):
-        pos = grid.coords_to_position(2, col)  # row 3 (0-indexed row 2)
-        wall_obstacles.add(pos)
-        grid.add_shelf(pos)
-
-    logger.info(f"Wall obstacles: {sorted(wall_obstacles)}")
-
     robot = Robot(grid, start)
 
-    logger.info("Grid with wall:")
+    logger.info("Initial grid:")
     print(grid.visualize(robot_pos=robot.position))
 
-    # Try to navigate to goal
-    logger.info(f"Attempting Bug2 navigation from {start} to {goal}")
-    success = bug2.navigate(robot, goal)
+    # Place dynamic obstacles blocking the path
+    dynamic_obstacles = {4, 10, 16, 22, 28, 34, 40}
 
-    if success:
-        logger.warning(f"Unexpectedly reached goal at {goal}")
-    else:
-        logger.info("EXPECTED RESULT: Path is blocked, cannot reach goal")
-        logger.info(f"Final robot position: {robot.position}")
+    logger.info(f"Placing dynamic obstacles at positions: {dynamic_obstacles}")
 
-    # Clean up obstacles for other demonstrations
-    for pos in wall_obstacles:
-        grid.remove_shelf(pos)
+    # Execute path with obstacle detection
+    logger.info("Robot starts executing path...")
+    success = bug2.bug2_navigate(robot, goal, dynamic_obstacles)
+
+    assert not success, "Bug2 should have failed due to blocked path"
+    logger.info("As expected, Bug2 navigation failed due to blocked path.")
 
 
 def main():
