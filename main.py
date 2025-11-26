@@ -124,6 +124,46 @@ def demonstrate_bug2_blocked(grid: Grid, start: int, goal: int):
     logger.info("As expected, Bug2 navigation failed due to blocked path.")
 
 
+def demonstrate_robot_collision(grid: Grid):
+    """
+    Demonstrate two robots following their planned paths concurrently and resolving collision via messaging protocol.
+    
+    Robot1 path: 1 → 7 → 13 → 19 → 20 → 26 → 32
+    Robot2 path: 32 → 26 → 20 → 19 → 13 → 7 → 1
+    They meet at position 20 and must coordinate via collision protocol.
+    """
+    logger.info("=" * 60)
+    logger.info("DEMONSTRATING TWO-ROBOT COLLISION AVOIDANCE (CONCURRENT)")
+    logger.info("=" * 60)
+
+    # Create two robots 
+    robot1 = Robot(grid, start_position=1, robot_id=1)
+    robot2 = Robot(grid, start_position=32, robot_id=2)
+
+    path1 = [1, 7, 13, 19, 20, 26, 32]
+    path2 = [32, 26, 20, 19, 13, 7, 1]
+
+    logger.info(f"Robot 1 path: {path1}")
+    logger.info(f"Robot 2 path: {path2}")
+    logger.info("Initial grid:")
+    print(grid.visualize(robot_pos=robot1.position))
+
+    logger.info("\nExecuting paths concurrently ")
+    results = bug2.run_two_robot_paths(robot1, path1, robot2, path2)
+
+    success1 = results.get("success1", False)
+    success2 = results.get("success2", False)
+    logger.info("\n" + "=" * 60)
+    if success1 and success2:
+        logger.info("SUCCESS: Both robots reached their goals")
+        logger.info(f"Robot 1 final position: {results.get('final1')}")
+        logger.info(f"Robot 2 final position: {results.get('final2')}")
+    else:
+        logger.warning(f"Robot 1 reached goal: {success1}, Robot 2 reached goal: {success2}")
+        logger.info(f"Robot 1 final position: {results.get('final1')}")
+        logger.info(f"Robot 2 final position: {results.get('final2')}")
+        
+
 def main():
     """Main function demonstrating all functionality"""
 
@@ -171,10 +211,12 @@ def main():
     # Demonstration 4: Bug2 with blocked path
     demonstrate_bug2_blocked(grid, start=1, goal=42)
 
-    logger.info("=" * 60)
-    logger.info("ALL DEMONSTRATIONS COMPLETED")
-    logger.info("=" * 60)
+    # Demonstration 5: Robot collision avoidance
+    demonstrate_robot_collision(grid)
+    
+    
 
 
 if __name__ == "__main__":
     main()
+    
