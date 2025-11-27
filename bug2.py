@@ -410,13 +410,16 @@ def run_two_robot_paths(
 
             res = handle_pair_collision(robot1, path1[-1], robot2, path2[-1], dynamic_obstacles, timeout)
 
-            # Advance leader indices so leaders stop stepping in main loop
+            # Advance only the leader indices to stop stepping; followers continue from current position
+            # After collision, leaders will have navigated around, so skip to end to stop their stepping
             if res.get("leader1"):
                 idx1 = len(path1)
+                success1 = res.get("success1", False)
             if res.get("leader2"):
                 idx2 = len(path2)
+                success2 = res.get("success2", False)
 
-            # continue to allow followers to resume with updated private_obstacles
+            # Followers continue stepping with updated private_obstacles from leader's final position
             continue
 
         # Robot 1 step
